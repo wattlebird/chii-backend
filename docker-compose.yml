@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+    web:
+        depends_on:
+            - db
+        restart: always
+        build: ./chii
+        ports:
+            - "80:80"
+        environment:
+            AZURE_FILESHARE_CONNECTIONSTRING: ""
+            AZURE_SQL_BANGUMIDB_CONNECTIONSTRING: ""
+            ASPNETCORE_ENVIRONMENT: "Development"
+    db:
+        image: "postgres:13"
+        restart: always
+        volumes:
+            - ./dbinit/:/docker-entrypoint-initdb.d
+        ports:
+            - "5555:5432"
+        environment: 
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: bangumi

@@ -45,9 +45,14 @@ namespace chii.Background
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var _db = scope.ServiceProvider.GetRequiredService<BangumiContext>();
-                var dbDate = _db.CustomRanks.First().Date;
-                var lastDate = await GetLastFileDate("bangumi-publish", "ranking", "customrank_");
-                if (dbDate != lastDate)
+                bool isEmptyDb = !_db.CustomRanks.Any();
+                DateTime dbDate = new DateTime(), lastDate = new DateTime();
+                if (!isEmptyDb)
+                {
+                    dbDate = _db.CustomRanks.First().Date;
+                    lastDate = await GetLastFileDate("bangumi-publish", "ranking", "customrank_");
+                }
+                if (isEmptyDb || dbDate != lastDate)
                 {
                     _logger.LogInformation($"Db date {dbDate.ToString()} doesn't match fileshare date {lastDate.ToString()}, will update.");
                     await UpdateSubjectDb(_db);
@@ -73,7 +78,7 @@ namespace chii.Background
 
         private async Task<DateTime> GetLastFileDate(string fileshare, string dir, string prefix)
         {
-            Console.WriteLine($"Getting latest date of {dir}.");
+            _logger.LogInformation($"Getting latest date of {dir}.");
             string connectionString = _config["AZURE_FILESHARE_CONNECTIONSTRING"];
             Regex dateRegex = new Regex(@"(\d+)_(\d+)_(\d+)", RegexOptions.Compiled);
             // Download subject and ranking file
@@ -94,13 +99,13 @@ namespace chii.Background
                     }
                 }
             }
-            Console.WriteLine($"Latest date of {dir} is {date.ToString()}");
+            _logger.LogInformation($"Latest date of {dir} is {date.ToString()}");
             return date;
         }
 
         private async Task DownloadFile(string fileshare, string dir, string filename)
         {
-            Console.WriteLine($"Download {filename} to working directory.");
+            _logger.LogInformation($"Download {filename} to working directory.");
             string connectionString = _config["AZURE_FILESHARE_CONNECTIONSTRING"];
             ShareClient share = new ShareClient(connectionString, fileshare);
             ShareDirectoryClient directory = share.GetDirectoryClient(dir);
@@ -115,7 +120,7 @@ namespace chii.Background
             }
             else
             {
-                Console.WriteLine($"File {filename} already exists.");
+                _logger.LogInformation($"File {filename} already exists.");
             }
         }
 
@@ -128,7 +133,7 @@ namespace chii.Background
 
             StreamReader fSubject = new StreamReader($"./{lastSubjectFile}");
 
-            Console.WriteLine("Reading all subjects...");
+            _logger.LogInformation("Reading all subjects...");
             string line;
             List<Subject> subjects = new List<Subject>();
             while ((line = fSubject.ReadLine()) != null)
@@ -158,6 +163,7 @@ namespace chii.Background
             }
             db.AddRange(subjects);
             db.SaveChanges();
+            _logger.LogInformation("Subjects archived successfully.");
         }
 
         private async Task UpdateTagDb(BangumiContext db)
@@ -169,9 +175,16 @@ namespace chii.Background
 
             StreamReader fTag = new StreamReader($"./{lastTagFile}");
 
-            Console.WriteLine("Reading all tags...");
+            _logger.LogInformation("Reading all tags...");
             string line = fTag.ReadLine(); // skip header
             List<Tag> tags = new List<Tag>();
+            int cnt = 0;
+            var s = db.Tags.Count();
+            if (s != 0)
+            {
+                db.Tags.RemoveRange(db.Tags);
+            }
+
             while ((line = fTag.ReadLine()) != null)
             {
                 var items = line.Split('\t');
@@ -179,20 +192,28 @@ namespace chii.Background
                 tags.Add(new Tag
                 {
                     SubjectId = Convert.ToInt32(items[0]),
-                    Content = items[1],
+                    Content = Regex.Replace(items[1], @"\s+", ""),
                     TagCount = Convert.ToInt32(items[2]),
                     UserCount = Convert.ToInt32(items[3]),
                     Confidence = Convert.ToDouble(items[4])
                 });
+                cnt++;
+
+                if (cnt == 100000)
+                {
+                    cnt = 0;
+                    db.Tags.AddRange(tags);
+                    db.SaveChanges();
+                    tags.Clear();
+                }
             }
 
-            var s = db.Tags.Count();
-            if (s != 0)
+            if (cnt != 0)
             {
-                db.Tags.RemoveRange(db.Tags);
+                db.Tags.AddRange(tags);
+                db.SaveChanges();
             }
-            db.Tags.AddRange(tags);
-            db.SaveChanges();
+            _logger.LogInformation("Tags archived successfully.");
         }
 
         private async Task UpdateRankDb(BangumiContext db)
@@ -204,7 +225,7 @@ namespace chii.Background
 
             StreamReader fRank = new StreamReader($"./{lastRankFile}");
 
-            Console.WriteLine("Reading all ranks...");
+            _logger.LogInformation("Reading all ranks...");
             string line = fRank.ReadLine(); // skip header
             List<CustomRank> ranks = new List<CustomRank>();
             while ((line = fRank.ReadLine()) != null)
@@ -225,6 +246,7 @@ namespace chii.Background
             }
             db.CustomRanks.AddRange(ranks);
             db.SaveChanges();
+            _logger.LogInformation("Ranking archived successfully.");
         }
     }
 }
