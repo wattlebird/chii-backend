@@ -1,0 +1,29 @@
+{
+  "name": "middletier",
+  "version": "0.0.1",
+  "description": "middle tier for chii backend, bangumi api service",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "watch": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wattlebird/chii-backend.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wattlebird/chii-backend/issues"
+  },
+  "homepage": "https://github.com/wattlebird/chii-backend#readme",
+  "dependencies": {
+    "apollo-datasource-rest": "^0.14.0",
+    "apollo-server": "^2.25.2",
+    "graphql": "^15.5.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.9"
+  }
+}

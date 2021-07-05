@@ -20,41 +20,18 @@ namespace chii.Controllers
             _context = context;
         }
 
-        // GET: api/Subjects
-        [HttpGet("all")]
-        public async Task<ActionResult<IEnumerable<ClientSubject>>> GetSubjects([FromQuery] string type = "anime", [FromQuery] int from = 0, [FromQuery] int step = 20)
-        {
-            var subjects = await _context.Subjects.Where(x => x.Type == type).OrderBy(x => x.Rank).Skip(from).Take(step)
-                .Include(sub => sub.Tags.OrderByDescending(t => t.Confidence).Take(5)).ToListAsync();
-            if (subjects.Count == 0)
-            {
-                return NotFound();
-            }
-            var rtn = subjects.Select(sub => new ClientSubject
-            {
-                Id = sub.Id,
-                Name = sub.Name,
-                NameCN = sub.NameCN,
-                Type = sub.Type,
-                Rank = sub.Rank,
-                Date = sub.Date,
-                Votenum = sub.Votenum,
-                Favnum = sub.Favnum,
-                Tags = sub.Tags.Select(tag => new ClientTag
-                {
-                    Tag = tag.Content,
-                    TagCount = tag.TagCount,
-                    UserCount = tag.UserCount,
-                    Confidence = tag.Confidence
-                }).ToList()
-            }).ToList();
-            return rtn;
-        }
-
         [HttpGet("ranked")]
-        public async Task<ActionResult<IEnumerable<ClientSubject>>> GetRankedSubjects([FromQuery] string type = "anime", [FromQuery] int from = 0, [FromQuery] int step = 20)
+        public async Task<ActionResult<IEnumerable<ClientSubject>>> GetRankedSubjects([FromQuery] string type = "anime", [FromQuery] int from = 0, [FromQuery] int step = 20, [FromQuery] bool bysci = true)
         {
-            var subjects = await _context.Subjects.Where(x => x.Type == type && x.Rank != null).OrderBy(x => x.Rank).Skip(from).Take(step)
+            var subjectsObj = _context.Subjects.Where(x => x.Type == type && x.Rank != null);
+            if (bysci)
+            {
+                subjectsObj = subjectsObj.OrderBy(x => x.ScientificRank);
+            } else
+            {
+                subjectsObj = subjectsObj.OrderBy(x => x.Rank);
+            }
+            var subjects = await subjectsObj.Skip(from).Take(step)
                 .Include(sub => sub.Tags.OrderByDescending(t => t.Confidence).Take(5))
                 .Include(sub => sub.ScientificRank).ToListAsync();
             if (subjects.Count == 0)
@@ -120,40 +97,5 @@ namespace chii.Controllers
             var cnt = await _context.Subjects.Where(sub => sub.Type == type && (sub.Rank != null || !ranked)).CountAsync();
             return cnt;
         }
-
-        [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<ClientSubject>>> SearchSubject([FromQuery] string keyword, [FromQuery] string type = "anime")
-        {
-            var subs = await _context.Subjects
-                .Where(sub => (sub.Name.Contains(keyword) || sub.NameCN.Contains(keyword)) && sub.Type == type)
-                .OrderBy(sub => sub.Rank)
-                .Include(sub => sub.Tags.OrderByDescending(t => t.Confidence).Take(5))
-                .ToListAsync();
-            if (subs.Count == 0)
-            {
-                return NotFound();
-            }
-
-            var rtn = subs.Select(sub => new ClientSubject
-            {
-                Id = sub.Id,
-                Name = sub.Name,
-                NameCN = sub.NameCN,
-                Type = sub.Type,
-                Rank = sub.Rank,
-                Date = sub.Date,
-                Votenum = sub.Votenum,
-                Favnum = sub.Favnum,
-                Tags = sub.Tags.Select(tag => new ClientTag
-                {
-                    Tag = tag.Content,
-                    TagCount = tag.TagCount,
-                    UserCount = tag.UserCount,
-                    Confidence = tag.Confidence
-                }).ToList()
-            }).ToList();
-            return rtn;
-        }
-        
     }
 }

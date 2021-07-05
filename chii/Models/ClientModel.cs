@@ -30,4 +30,16 @@ namespace chii.Models
         public int Coverage { get; set; }
         public double Confidence { get; set; }
     }
+
+    public class SearchField
+    {
+        public List<string>? tags { get; set; }
+        public int? minVoters { get; set; }
+        public int? minFavs { get; set; }
+    }
+
+    public class RelatedTagField
+    {
+        public List<string>? tags { get; set; }
+    }
 }

@@ -7,7 +7,7 @@ COPY . .
 RUN dotnet restore chii.csproj
 
 # copy everything else and build app
-RUN dotnet publish -c debug -o /app --no-restore
+RUN dotnet publish -c release -o /app --no-restore
 
 # final stage/image
 FROM mcr.microsoft.com/dotnet/aspnet:5.0

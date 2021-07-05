@@ -34,11 +34,22 @@ namespace chii.Controllers
             return tags;
         }
 
-        [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<ClientSubject>>> SearchTags([FromQuery] string tags, [FromQuery] string type = "anime")
+        [HttpPost("search")]
+        [Consumes("application/json")]
+        public async Task<ActionResult<IEnumerable<ClientSubject>>> SearchTags(SearchField searchField, [FromQuery] string type = "anime")
         {
-            List<string> vs = tags.Trim().Split().ToList();
-            var candidates = await _context.Tags.Where(t => vs.Contains(t.Content) && t.Subject.Type == type && t.Confidence > 1e-3).ToListAsync();
+            List<string> tags = new List<string>();
+            int minVoters = 0, minFavers = 0;
+            if (searchField.tags?.Count() > 0)
+            {
+                tags = searchField.tags;
+            }
+            if (searchField.minVoters != null) minVoters = searchField.minVoters.Value;
+            if (searchField.minFavs != null) minFavers = searchField.minFavs.Value;
+
+            var candidates = await _context.Tags
+                .Where(t => tags.Contains(t.Content) && t.Confidence > 1e-3 && t.Subject.Favnum > minFavers && t.Subject.Votenum > minVoters && t.Subject.Type == type)
+                .ToListAsync();
             var aggregated = candidates.GroupBy(t => t.Content, t => t.SubjectId).ToList();
             int idx = 0;
             List<int> subjectIds = new List<int>();
@@ -71,8 +82,18 @@ namespace chii.Controllers
 
         [HttpPost("related")]
         [Consumes("application/json")]
-        public async Task<ActionResult<IEnumerable<BriefTag>>> GetRelatedTags(List<string> tags, [FromQuery] string type = "anime")
+        public async Task<ActionResult<IEnumerable<BriefTag>>> GetRelatedTags(RelatedTagField relatedTagField, [FromQuery] string type = "anime")
         {
+            List<string> tags = new List<string>();
+            if (relatedTagField.tags?.Count() > 0)
+            {
+                tags = relatedTagField.tags;
+            }
+            if (tags.Count() == 0)
+            {
+                var rst = await GetAllTags(type);
+                return rst;
+            }
             var candidates = await _context.Tags
                 .Where(t => tags.Contains(t.Content) && t.Subject.Type == type && t.Confidence > 1e-3)
                 .Select(t => t.SubjectId)
