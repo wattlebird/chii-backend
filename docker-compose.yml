@@ -1,5 +1,17 @@
 version: "3.9"
 services:
+    middletier:
+        depends_on: 
+            - web
+            - redis
+        restart: always
+        build: ./middletier
+        ports:
+            - "4000:4000"
+        environment: 
+            WEB_URL: "http://web:5000"
+            REDIS_HOST: "redis"
+            NODE_ENV: "development"
     web:
         depends_on:
             - db
@@ -20,3 +32,6 @@ services:
         environment: 
             POSTGRES_PASSWORD: password
             POSTGRES_DB: bangumi
+    redis:
+        image: "redis:6"
+        restart: always

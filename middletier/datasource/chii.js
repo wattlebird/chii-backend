@@ -1,10 +1,12 @@
 const { RESTDataSource } = require('apollo-datasource-rest')
 
+const web_url = process.env.WEB_URL || 'http://localhost:5000/'
+
 class chiiAPI extends RESTDataSource {
   constructor() {
     // global client options
     super()
-    this.baseURL = 'http://localhost:5000/';
+    this.baseURL = web_url;
   }
 
   async getLastDate() {

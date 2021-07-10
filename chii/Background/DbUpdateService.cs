@@ -45,7 +45,7 @@ namespace chii.Background
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var _db = scope.ServiceProvider.GetRequiredService<BangumiContext>();
-                bool isEmptyDb = !_db.CustomRanks.Any();
+                bool isEmptyDb = _db.CustomRanks.Count() == 0;
                 DateTime dbDate = new DateTime(), lastDate = new DateTime();
                 if (!isEmptyDb)
                 {

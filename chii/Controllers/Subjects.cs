@@ -26,12 +26,12 @@ namespace chii.Controllers
             var subjectsObj = _context.Subjects.Where(x => x.Type == type && x.Rank != null);
             if (bysci)
             {
-                subjectsObj = subjectsObj.OrderBy(x => x.ScientificRank);
+                subjectsObj = subjectsObj.OrderBy(x => x.ScientificRank.SciRank).Skip(from).Take(step);
             } else
             {
-                subjectsObj = subjectsObj.OrderBy(x => x.Rank);
+                subjectsObj = subjectsObj.OrderBy(x => x.Rank).Skip(from).Take(step);
             }
-            var subjects = await subjectsObj.Skip(from).Take(step)
+            var subjects = await subjectsObj
                 .Include(sub => sub.Tags.OrderByDescending(t => t.Confidence).Take(5))
                 .Include(sub => sub.ScientificRank).ToListAsync();
             if (subjects.Count == 0)

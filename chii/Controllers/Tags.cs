@@ -51,6 +51,7 @@ namespace chii.Controllers
                 .Where(t => tags.Contains(t.Content) && t.Confidence > 1e-3 && t.Subject.Favnum > minFavers && t.Subject.Votenum > minVoters && t.Subject.Type == type)
                 .ToListAsync();
             var aggregated = candidates.GroupBy(t => t.Content, t => t.SubjectId).ToList();
+            if (aggregated.Count() < tags.Count()) return NotFound();
             int idx = 0;
             List<int> subjectIds = new List<int>();
             aggregated.ForEach(itm =>
