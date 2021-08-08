@@ -45,7 +45,7 @@ namespace chii.Controllers
                 NameCN = sub.NameCN,
                 Type = sub.Type,
                 Rank = sub.Rank,
-                SciRank = sub.ScientificRank.SciRank,
+                SciRank = sub.ScientificRank?.SciRank,
                 Date = sub.Date,
                 Votenum = sub.Votenum,
                 Favnum = sub.Favnum,
@@ -94,7 +94,7 @@ namespace chii.Controllers
         [HttpGet("count")]
         public async Task<int> GetSubjectCount([FromQuery] string type = "anime", [FromQuery] bool ranked = true)
         {
-            var cnt = await _context.Subjects.Where(sub => sub.Type == type && (sub.Rank != null || !ranked)).CountAsync();
+            var cnt = await _context.Subjects.Where(sub => sub.Type == type && (sub.ScientificRank != null || !ranked)).CountAsync();
             return cnt;
         }
     }

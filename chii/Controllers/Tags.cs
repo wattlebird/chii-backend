@@ -67,12 +67,13 @@ namespace chii.Controllers
                 idx++;
             });
             if (subjectIds.Count() == 0) return NotFound();
-            var rtn = await _context.Subjects.Where(sub => subjectIds.Contains(sub.Id)).Select(subject => new ClientSubject
+            var rtn = await _context.Subjects.Where(sub => subjectIds.Contains(sub.Id)).Include(sub => sub.ScientificRank).Select(subject => new ClientSubject
             {
                 Id = subject.Id,
                 Name = subject.Name,
                 NameCN = subject.NameCN,
                 Type = subject.Type,
+                SciRank = subject.ScientificRank.SciRank,
                 Rank = subject.Rank,
                 Date = subject.Date,
                 Votenum = subject.Votenum,
@@ -98,10 +99,21 @@ namespace chii.Controllers
             var candidates = await _context.Tags
                 .Where(t => tags.Contains(t.Content) && t.Subject.Type == type && t.Confidence > 1e-3)
                 .Select(t => t.SubjectId)
-                .Distinct()
                 .ToListAsync();
+            Dictionary<int, int> cnt = new Dictionary<int, int>();
+            candidates.ForEach(subject =>
+            {
+                if (cnt.ContainsKey(subject)) cnt[subject] += 1;
+                else cnt[subject] = 1;
+            });
+            List<int> relatedSubjects = new List<int>();
+            foreach(var kv in cnt)
+            {
+                if (kv.Value == tags.Count) relatedSubjects.Add(kv.Key);
+            }
+            if (relatedSubjects.Count == 0) return new List<BriefTag>();
             var rtn = await _context.Tags
-                .Where(t => candidates.Contains(t.SubjectId) && t.Subject.Type == type && t.Confidence > 1e-3)
+                .Where(t => relatedSubjects.Contains(t.SubjectId) && t.Subject.Type == type && t.Confidence > 1e-3)
                 .GroupBy(tag => tag.Content, (key, tags) => new BriefTag
                 {
                     Tag = key,
