@@ -1,22 +1,22 @@
-name: Build and push middletier image
+name: Build and push backend image
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'middletier/**'
+      - 'chii/**'
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: get-npm-version
+    - name: Get current version
       id: package-version
       uses: martinbeentjes/npm-get-version-action@master
       with:
-        path: middletier/
+        path: chii/
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
@@ -29,6 +29,6 @@ jobs:
       id: docker_build
       uses: docker/build-push-action@v2
       with:
-        context: ./middletier
+        context: ./chii
         push: true
-        tags: wattlebird/chii_middletier:latest, wattlebird/chii_middletier:${{ steps.package-version.outputs.current-version}}
+        tags: wattlebird/chii_backend:latest, wattlebird/chii_backend:${{ steps.package-version.outputs.current-version}}
