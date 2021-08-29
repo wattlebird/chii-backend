@@ -1,6 +1,6 @@
 {
   "name": "middletier",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "middle tier for chii backend, bangumi api service",
   "main": "index.js",
   "scripts": {
