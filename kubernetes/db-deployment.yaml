@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: db
+  name: db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: db
+  template:
+    metadata:
+      labels:
+        service: db
+    spec:
+      containers:
+        - env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-connection
+                  key: POSTGRES_DB
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-connection
+                  key: POSTGRES_PASSWORD
+          image: wattlebird/chii_db:latest
+          name: db
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: db-storage
+              mountPath: /var/lib/postgresql
+          resources: {}
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: db-claim
+      restartPolicy: Always
+status: {}

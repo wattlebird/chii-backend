@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-config
+  namespace: default
+data:
+  WEB_URL: "http://web:5000"
+  REDIS_HOST: "redis"
+  NODE_ENV: "development"
+  ASPNETCORE_ENVIRONMENT: "Development"
+  ASPNETCORE_URLS: "http://0.0.0.0:5000"
+

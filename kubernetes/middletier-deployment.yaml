@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: middletier
+  name: middletier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: middletier
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        service: middletier
+    spec:
+      containers:
+        - image: wattlebird/chii_middletier:0.1.0
+          name: middletier
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - configMapRef:
+                name: env-config
+          resources: {}
+      restartPolicy: Always
+status: {}

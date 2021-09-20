@@ -1,5 +1,12 @@
-version: "3.9"
+version: "3"
 services:
+    frontend:
+        depends_on: 
+            - middletier
+        restart: always
+        image: "frontend:beta"
+        ports: 
+            - "80:80"
     middletier:
         depends_on: 
             - web

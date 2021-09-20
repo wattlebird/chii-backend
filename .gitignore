@@ -403,3 +403,6 @@ ASALocalRun/
 
 # Local History for Visual Studio
 .localhistory/
+
+# K8s secret
+kubernetes/.secret

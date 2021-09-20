@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: web
+  name: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: web
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        service: web
+    spec:
+      containers:
+        - env:
+            - name: ASPNETCORE_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: env-config
+                  key: ASPNETCORE_ENVIRONMENT
+            - name: ASPNETCORE_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: env-config
+                  key: ASPNETCORE_URLS
+            - name: AZURE_FILESHARE_CONNECTIONSTRING
+              valueFrom:
+                secretKeyRef:
+                  name: db-connection
+                  key: AZURE_FILE
+            - name: AZURE_SQL_BANGUMIDB_CONNECTIONSTRING
+              valueFrom:
+                secretKeyRef:
+                  name: db-connection
+                  key: DB_CONNECTIONSTRING
+          image: wattlebird/chii_backend:0.1.0
+          name: web
+          ports:
+            - containerPort: 5000
+          resources: {}
+      restartPolicy: Always
+status: {}
