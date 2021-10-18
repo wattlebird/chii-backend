@@ -76,8 +76,6 @@ namespace chii.Controllers
                 SciRank = subject.ScientificRank.SciRank,
                 Rank = subject.Rank,
                 Date = subject.Date,
-                Votenum = subject.Votenum,
-                Favnum = subject.Favnum
             }).ToListAsync();
             return rtn;
         }

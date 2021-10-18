@@ -1,9 +1,10 @@
 const { ApolloServer } = require('apollo-server');
 const { BaseRedisCache } = require('apollo-server-cache-redis');
 const Redis = require('ioredis');
-const typeDef = require("./graphql/chii.graphql");
-const resolvers = require("./resolver/chii_resolver");
+const typeDef = require("./graphql/schema.graphql");
+const resolvers = require("./resolver");
 const chiiAPI = require("./datasource/chii")
+const bangumiAPI = require("./datasource/bangumi")
 
 const redis_host = process.env.REDIS_HOST || "localhost"
 
@@ -18,7 +19,8 @@ const server = new ApolloServer({
   }),
   dataSources: () => {
     return {
-      chiiAPI: new chiiAPI()
+      chiiAPI: new chiiAPI(),
+      bangumiAPI: new bangumiAPI()
     }
   }
 });

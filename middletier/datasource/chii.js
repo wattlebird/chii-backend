@@ -48,6 +48,10 @@ class chiiAPI extends RESTDataSource {
       tags
     })
   }
+
+  async getSubject(id) {
+    return this.get(`/api/subjects/${id}`)
+  }
 }
 
 module.exports = chiiAPI

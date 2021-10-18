@@ -32,7 +32,6 @@ namespace chii.Controllers
                 subjectsObj = subjectsObj.OrderBy(x => x.Rank).Skip(from).Take(step);
             }
             var subjects = await subjectsObj
-                .Include(sub => sub.Tags.OrderByDescending(t => t.Confidence).Take(5))
                 .Include(sub => sub.ScientificRank).ToListAsync();
             if (subjects.Count == 0)
             {
@@ -47,15 +46,6 @@ namespace chii.Controllers
                 Rank = sub.Rank,
                 SciRank = sub.ScientificRank?.SciRank,
                 Date = sub.Date,
-                Votenum = sub.Votenum,
-                Favnum = sub.Favnum,
-                Tags = sub.Tags.Select(tag => new ClientTag
-                {
-                    Tag = tag.Content,
-                    TagCount = tag.TagCount,
-                    UserCount = tag.UserCount,
-                    Confidence = tag.Confidence
-                }).ToList()
             }).ToList();
             return rtn;
         }
@@ -65,6 +55,7 @@ namespace chii.Controllers
         public async Task<ActionResult<ClientSubject>> GetSubject(int id)
         {
             var subject = await _context.Subjects.Where(x => x.Id == id)
+                .Include(sub => sub.ScientificRank)
                 .Include(sub => sub.Tags).FirstAsync();
             if (subject == null)
             {
@@ -77,6 +68,7 @@ namespace chii.Controllers
                 NameCN = subject.NameCN,
                 Type = subject.Type,
                 Rank = subject.Rank,
+                SciRank = subject.ScientificRank?.SciRank,
                 Date = subject.Date,
                 Votenum = subject.Votenum,
                 Favnum = subject.Favnum,

@@ -33,12 +33,35 @@ type Subject {
   tags: [Tag]
 }
 
+
+type ImageUrls {
+  large: String!,
+  common: String!,
+  medium: String!,
+  small: String!,
+  grid: String!,
+}
+
+type SubjectSmall {
+  id: ID!,
+  url: String!,
+  type: String!,
+  name: String!,
+  name_cn: String,
+  summary: String,
+  air_date: String,
+  air_weekday: Int,
+  images: ImageUrls
+}
+
 type Query {
   queryRankingDate: String,
   queryRankingList(bysci: Boolean, from: Int, step: Int): [Subject],
   queryRankingCount: Int,
+  querySubject(id: Int): Subject,
   getTagList: [BriefTag],
   searchByTag(tags: [String], minVoters: Int, minFavs: Int): [Subject],
-  searchRelatedTags(tags: [String]): [BriefTag]
+  searchRelatedTags(tags: [String]): [BriefTag],
+  queryBangumiSubject(id: Int): SubjectSmall
 }
 `
