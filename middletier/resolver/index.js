@@ -21,13 +21,13 @@ const resolvers = {
       return dataSources.chiiAPI.getSubject(id);
     },
     getTagList: async(_, __, { dataSources }) => {
-      return dataSources.chiiAPI.getTags("anime");
+      return dataSources.chiiAPI.getTags();
     },
     searchByTag: async(_, {tags, minVoters, minFavs}, {dataSources}) => {
-      return dataSources.chiiAPI.searchSubjectByTags("anime", tags, minVoters, minFavs);
+      return dataSources.chiiAPI.searchSubjectByTags(tags, minVoters, minFavs);
     },
     searchRelatedTags: async(_, {tags}, {dataSources}) => {
-      return dataSources.chiiAPI.searchRelatedTags("anime", tags);
+      return dataSources.chiiAPI.searchRelatedTags(tags);
     },
 
     queryBangumiSubject: (_, { id }, { dataSources }) => {

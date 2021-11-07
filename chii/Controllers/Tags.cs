@@ -19,9 +19,8 @@ namespace chii.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<BriefTag>>> GetAllTags([FromQuery] string type="anime") {
+        public async Task<ActionResult<IEnumerable<BriefTag>>> GetAllTags() {
             var tags = await _context.Tags
-                .Where(tag => tag.Subject.Type == type)
                 .GroupBy(tag => tag.Content, (key, tags) => new BriefTag
                     {
                         Tag = key,
@@ -36,7 +35,7 @@ namespace chii.Controllers
 
         [HttpPost("search")]
         [Consumes("application/json")]
-        public async Task<ActionResult<IEnumerable<ClientSubject>>> SearchTags(SearchField searchField, [FromQuery] string type = "anime")
+        public async Task<ActionResult<IEnumerable<ClientSubject>>> SearchTags(SearchField searchField)
         {
             List<string> tags = new List<string>();
             int minVoters = 0, minFavers = 0;
@@ -48,7 +47,7 @@ namespace chii.Controllers
             if (searchField.minFavs != null) minFavers = searchField.minFavs.Value;
 
             var candidates = await _context.Tags
-                .Where(t => tags.Contains(t.Content) && t.Confidence > 1e-3 && t.Subject.Favnum > minFavers && t.Subject.Votenum > minVoters && t.Subject.Type == type)
+                .Where(t => tags.Contains(t.Content) && t.Confidence > 1e-3 && t.Subject.Favnum > minFavers && t.Subject.Votenum > minVoters)
                 .ToListAsync();
             var aggregated = candidates.GroupBy(t => t.Content, t => t.SubjectId).ToList();
             if (aggregated.Count() < tags.Count()) return NotFound();
@@ -82,7 +81,7 @@ namespace chii.Controllers
 
         [HttpPost("related")]
         [Consumes("application/json")]
-        public async Task<ActionResult<IEnumerable<BriefTag>>> GetRelatedTags(RelatedTagField relatedTagField, [FromQuery] string type = "anime")
+        public async Task<ActionResult<IEnumerable<BriefTag>>> GetRelatedTags(RelatedTagField relatedTagField)
         {
             List<string> tags = new List<string>();
             if (relatedTagField.tags?.Count() > 0)
@@ -91,11 +90,10 @@ namespace chii.Controllers
             }
             if (tags.Count() == 0)
             {
-                var rst = await GetAllTags(type);
-                return rst;
+                return new List<BriefTag>();
             }
             var candidates = await _context.Tags
-                .Where(t => tags.Contains(t.Content) && t.Subject.Type == type && t.Confidence > 1e-3)
+                .Where(t => tags.Contains(t.Content) && t.Confidence > 1e-3)
                 .Select(t => t.SubjectId)
                 .ToListAsync();
             Dictionary<int, int> cnt = new Dictionary<int, int>();
@@ -111,7 +109,7 @@ namespace chii.Controllers
             }
             if (relatedSubjects.Count == 0) return new List<BriefTag>();
             var rtn = await _context.Tags
-                .Where(t => relatedSubjects.Contains(t.SubjectId) && t.Subject.Type == type && t.Confidence > 1e-3)
+                .Where(t => relatedSubjects.Contains(t.SubjectId) && t.Confidence > 1e-3)
                 .GroupBy(tag => tag.Content, (key, tags) => new BriefTag
                 {
                     Tag = key,

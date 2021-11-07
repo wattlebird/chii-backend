@@ -29,22 +29,20 @@ class chiiAPI extends RESTDataSource {
     })
   }
 
-  async getTags(type) {
-    return this.get(`/api/tags`, {
-      type
-    })
+  async getTags() {
+    return this.get(`/api/tags`)
   }
 
-  async searchSubjectByTags(type, tags, minVoters, minFavs) {
-    return this.post(`/api/tags/search?type=${type}`,  {
+  async searchSubjectByTags(tags, minVoters, minFavs) {
+    return this.post(`/api/tags/search`,  {
       tags,
       minVoters,
       minFavs
     })
   }
 
-  async searchRelatedTags(type, tags) {
-    return this.post(`/api/tags/related?type=${type}`, {
+  async searchRelatedTags(tags) {
+    return this.post(`/api/tags/related`, {
       tags
     })
   }
