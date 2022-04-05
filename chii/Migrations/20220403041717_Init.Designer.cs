@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chii.Models;
@@ -9,9 +10,10 @@ using chii.Models;
 namespace chii.Migrations
 {
     [DbContext(typeof(BangumiContext))]
-    partial class BangumiContextModelSnapshot : ModelSnapshot
+    [Migration("20220403041717_Init")]
+    partial class Init
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -106,7 +108,9 @@ namespace chii.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubjectId", "NormalizedAlias");
+                    b.HasIndex("NormalizedAlias");
+
+                    b.HasIndex("SubjectId");
 
                     b.ToTable("SubjectEntities");
                 });
@@ -135,7 +139,8 @@ namespace chii.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubjectId", "NormalizedContent");
+                    b.HasIndex("SubjectId", "NormalizedContent")
+                        .IsUnique();
 
                     b.ToTable("Tags");
                 });

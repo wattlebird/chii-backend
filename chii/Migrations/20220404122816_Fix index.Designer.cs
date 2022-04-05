@@ -10,8 +10,8 @@ using chii.Models;
 namespace chii.Migrations
 {
     [DbContext(typeof(BangumiContext))]
-    [Migration("20210628132311_init")]
-    partial class init
+    [Migration("20220404122816_Fix index")]
+    partial class Fixindex
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -26,9 +26,6 @@ namespace chii.Migrations
                     b.Property<int>("SubjectId")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp without time zone");
-
                     b.Property<int>("SciRank")
                         .HasColumnType("integer");
 
@@ -42,32 +39,78 @@ namespace chii.Migrations
                     b.Property<int>("Id")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("Date")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int>("Favnum")
+                    b.Property<int>("CollectCount")
                         .HasColumnType("integer");
+
+                    b.Property<int>("DoCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DroppedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FavCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Infobox")
+                        .HasColumnType("json");
+
+                    b.Property<bool>("NSFW")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("varchar(80)");
 
                     b.Property<string>("NameCN")
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<int>("OnHoldCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Platform")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("Rank")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("varchar(10)");
+                    b.Property<int>("RateCount")
+                        .HasColumnType("integer");
 
-                    b.Property<int>("Votenum")
+                    b.Property<string>("Summary")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .HasColumnType("text");
+
+                    b.Property<int>("WishCount")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.ToTable("Subjects");
+                });
+
+            modelBuilder.Entity("chii.Models.SubjectEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+
+                    b.Property<string>("Alias")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NormalizedAlias")
+                        .HasColumnType("text");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId", "NormalizedAlias");
+
+                    b.ToTable("SubjectEntities");
                 });
 
             modelBuilder.Entity("chii.Models.Tag", b =>
@@ -81,12 +124,12 @@ namespace chii.Migrations
                         .HasColumnType("double precision");
 
                     b.Property<string>("Content")
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("text");
+
+                    b.Property<string>("NormalizedContent")
+                        .HasColumnType("text");
 
                     b.Property<int>("SubjectId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TagCount")
                         .HasColumnType("integer");
 
                     b.Property<int>("UserCount")
@@ -94,10 +137,19 @@ namespace chii.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubjectId", "Content")
-                        .IsUnique();
+                    b.HasIndex("SubjectId", "NormalizedContent");
 
                     b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("chii.Models.Timestamp", b =>
+                {
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Date");
+
+                    b.ToTable("Timestamps");
                 });
 
             modelBuilder.Entity("chii.Models.CustomRank", b =>
@@ -105,6 +157,17 @@ namespace chii.Migrations
                     b.HasOne("chii.Models.Subject", "Subject")
                         .WithOne("ScientificRank")
                         .HasForeignKey("chii.Models.CustomRank", "SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("chii.Models.SubjectEntity", b =>
+                {
+                    b.HasOne("chii.Models.Subject", "Subject")
+                        .WithMany("SubjectEntities")
+                        .HasForeignKey("SubjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -125,6 +188,8 @@ namespace chii.Migrations
             modelBuilder.Entity("chii.Models.Subject", b =>
                 {
                     b.Navigation("ScientificRank");
+
+                    b.Navigation("SubjectEntities");
 
                     b.Navigation("Tags");
                 });
