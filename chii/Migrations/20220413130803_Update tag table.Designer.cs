@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chii.Models;
@@ -9,9 +10,10 @@ using chii.Models;
 namespace chii.Migrations
 {
     [DbContext(typeof(BangumiContext))]
-    partial class BangumiContextModelSnapshot : ModelSnapshot
+    [Migration("20220413130803_Update tag table")]
+    partial class Updatetagtable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

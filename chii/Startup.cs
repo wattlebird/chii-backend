@@ -31,14 +31,14 @@ namespace chii
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<BangumiContext>(opt => opt.UseNpgsql(Configuration["AZURE_SQL_BANGUMIDB_CONNECTIONSTRING"]));
-            //services.AddControllers().
-            //    AddNewtonsoftJson(options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+            services.AddControllers().
+                AddNewtonsoftJson(options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
             services.AddHostedService<DbUpdateService>();
             services.AddScoped<ISyncService, SyncService>();
-            //services.AddSwaggerGen(c =>
-            //{
-            //    c.SwaggerDoc("v1", new OpenApiInfo { Title = "chii", Version = "v1" });
-            //});
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "chii", Version = "v1" });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -47,20 +47,22 @@ namespace chii
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                //app.UseSwagger();
-                //app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "chii v1"));
+                app.UseSwagger();
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "chii v1"));
             }
 
-            //app.UseHttpsRedirection();
+            app.UseHttpLogging();
 
-            //app.UseRouting();
+            app.UseHttpsRedirection();
 
-            //app.UseAuthorization();
+            app.UseRouting();
 
-            //app.UseEndpoints(endpoints =>
-            //{
-            //    endpoints.MapControllers();
-            //});
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
         }
     }
 }

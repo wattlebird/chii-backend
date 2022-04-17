@@ -25,21 +25,25 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.11.0" />
+    <PackageReference Include="CHTCHSConv" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Models\" />
     <Folder Include="Controllers\" />
     <Folder Include="Background\" />
+    <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Azure.Storage.Blobs" />
     <None Remove="subject_archive_2022_03_19.jsonlines" />
+    <None Remove="OpenCCNET" />
+    <None Remove="Services\" />
+    <None Remove="CHTCHSConv" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="Controllers\Miscellaneous.cs" />
-    <Compile Remove="Controllers\Subjects.cs" />
-    <Compile Remove="Controllers\Tags.cs" />
     <Compile Remove="Models\ClientModel.cs" />
+    <Compile Remove="Services\Normalizer.cs" />
+    <Compile Remove="Controllers\Tags.cs" />
   </ItemGroup>
 </Project>

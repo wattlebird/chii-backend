@@ -67,8 +67,10 @@ namespace chii.Models
         [Column(TypeName = "text")]
         [JsonProperty(PropertyName = "tags_normalized")]
         public string NormalizedContent { get; set; }
-        [JsonProperty(PropertyName = "cnt")]
+        [JsonProperty(PropertyName = "tag_cnt")]
         public int UserCount { get; set; }
+        [JsonProperty(PropertyName = "tagnorm_cnt")]
+        public int NormUserCount { get; set; }
         [JsonProperty(PropertyName = "confidence")]
         public double Confidence { get; set; }
 

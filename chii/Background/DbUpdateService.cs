@@ -35,11 +35,12 @@ namespace chii.Background
 
         public async Task Sync()
         {
+            _logger.LogInformation("Start sync job...");
             string connectionString = _config["AZURE_FILESHARE_CONNECTIONSTRING"];
             BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
             BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient("database");
             DateTime date = await GetLastFileDate(containerClient, "customrank");
-            if (_db.Timestamps.Count() > 0 && _db.Timestamps.First().Date > date) // TODO: for debug convenience, I place > instead of >= here.
+            if (_db.Timestamps.Count() > 0 && _db.Timestamps.First().Date >= date)
             {
                 _logger.LogInformation($"Data on {date.ToString()} already exists, exit.");
                 return;
@@ -138,7 +139,7 @@ namespace chii.Background
             }
 
             DateTime lastDate = await GetLastFileDate(blobContainerClient, "tags");
-            //DateTime lastDate = new DateTime(2022, 4, 3);
+            //DateTime lastDate = new DateTime(2022, 4, 12);
             string lastTagFile = "tags_" + lastDate.ToString("yyyy_MM_dd") + ".jsonlines";
             await DownloadFile(blobContainerClient, lastTagFile);
 
@@ -269,7 +270,7 @@ namespace chii.Background
             _logger.LogInformation("Set up db update cron job.");
 
             _timer = new Timer(UpdateDatabase, null, TimeSpan.Zero,
-                TimeSpan.FromHours(1));
+                TimeSpan.FromHours(3));
 
             return Task.CompletedTask;
         }
