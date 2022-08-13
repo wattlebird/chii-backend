@@ -71,7 +71,6 @@ namespace chii.Background
 
             using (var reader = new StreamReader($"./{lastSubjectFile}"))
             {
-                
                 while (reader.Peek() >= 0)
                 {
                     int cnt = 0;
@@ -79,7 +78,15 @@ namespace chii.Background
                     while (reader.Peek() >= 0 && cnt <= 10000)
                     {
                         string record = reader.ReadLine().Trim();
-                        Subject subject = JsonConvert.DeserializeObject<Subject>(record);
+                        Subject subject;
+                        try
+                        {
+                            subject = JsonConvert.DeserializeObject<Subject>(record);
+                        } catch
+                        {
+                            _logger.LogError("Cannot deserialize Subject: ", record);
+                            continue;
+                        }
                         subjects.Add(subject);
                         cnt++;
                     }
@@ -117,7 +124,15 @@ namespace chii.Background
                     while (reader.Peek() >= 0 && cnt <= 10000)
                     {
                         string record = reader.ReadLine().Trim();
-                        SubjectEntity subjectEnt = JsonConvert.DeserializeObject<SubjectEntity>(record);
+                        SubjectEntity subjectEnt;
+                        try
+                        {
+                            subjectEnt = JsonConvert.DeserializeObject<SubjectEntity>(record);
+                        } catch
+                        {
+                            _logger.LogError("Cannot deserialize SubjectEntity: ", record);
+                            continue;
+                        }
                         subjectEnts.Add(subjectEnt);
                         cnt++;
                     }
@@ -155,7 +170,16 @@ namespace chii.Background
                     while (reader.Peek() >= 0 && cnt <= 10000)
                     {
                         string record = reader.ReadLine().Trim();
-                        Tag tag = JsonConvert.DeserializeObject<Tag>(record);
+                        Tag tag;
+                        try
+                        {
+                            tag = JsonConvert.DeserializeObject<Tag>(record);
+                        }
+                        catch
+                        {
+                            _logger.LogError("Cannot deserialize Tag: ", record);
+                            continue;
+                        }
                         tags.Add(tag);
                         cnt++;
                     }

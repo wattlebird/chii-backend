@@ -27,7 +27,7 @@ namespace chii.Controllers
             q = q.Trim().ToLowerInvariant();
             q = Regex.Replace(q, @"\W", "");
             q = ChineseConverter.Convert(q, ChineseConversionDirection.TraditionalToSimplified);
-            if (String.IsNullOrEmpty(q) || q.Length < 3) return null;
+            if (String.IsNullOrEmpty(q)) return null;
 
             var tagCandidates = _context.Tags.Where(tag => tag.NormalizedContent.StartsWith(q)).GroupBy(tag => new { tag.Content, tag.NormalizedContent }, (key, tags) => new
             {
@@ -53,15 +53,16 @@ namespace chii.Controllers
         [HttpGet("related")]
         public async Task<ActionResult<IEnumerable<TagResponse>>> Related([FromQuery] string q)
         {
-            string[] vq = q.Split('+');
+            string[] vq = q.Split(' ');
             vq = vq.Select(eq => ChineseConverter.Convert(Regex.Replace(HttpUtility.UrlDecode(eq).Trim().ToLowerInvariant(), @"\W", ""), ChineseConversionDirection.TraditionalToSimplified))
                 .Where(eq => !String.IsNullOrEmpty(eq)).ToArray<string>();
             var relatedSubjects = _context.Tags
                 .Where(t => vq.Contains(t.NormalizedContent) && t.Confidence > 1e-3)
+                .GroupBy(t => new { t.SubjectId, t.NormalizedContent }, (key, tags) => new { SubjectId = key.SubjectId, Tag = key.NormalizedContent, Confidence = tags.Max(x => x.Confidence) })
                 .GroupBy(t => t.SubjectId, (key, tags) => new { SubjectId = key, Hits = tags.Count() })
                 .Where(item => item.Hits == vq.Length);
             var relatedTags = _context.Tags.Join(relatedSubjects, tags => tags.SubjectId, subject => subject.SubjectId,
-                (tags, subject) => tags).Where(tag => tag.Confidence > 1e-3 && !vq.Contains(tag.NormalizedContent))
+                (tags, subject) => tags).Where(tag => tag.Confidence > 1e-2 && tag.UserCount > 2 && !vq.Contains(tag.NormalizedContent))
                 .GroupBy(tag => tag.Content, (key, tags) => new TagResponse { Content = key, UserCount = tags.Sum(tag => tag.UserCount), Confidence = tags.Average(tag => tag.Confidence) })
                 .OrderByDescending(x => x.UserCount).ThenByDescending(x => x.Confidence);
             return await relatedTags.ToListAsync();
@@ -71,11 +72,12 @@ namespace chii.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SubjectResponse>>> TagSearch([FromQuery] string q)
         {
-            string[] vq = q.Split('+');
+            string[] vq = q.Split(' ');
             vq = vq.Select(eq => ChineseConverter.Convert(Regex.Replace(HttpUtility.UrlDecode(eq).Trim().ToLowerInvariant(), @"\W", ""), ChineseConversionDirection.TraditionalToSimplified))
                 .Where(eq => !String.IsNullOrEmpty(eq)).ToArray<string>();
             var relatedSubjectIds = _context.Tags
                 .Where(t => vq.Contains(t.NormalizedContent) && t.Confidence > 1e-3)
+                .GroupBy(t => new { t.SubjectId, t.NormalizedContent }, (key, tags) => new { SubjectId = key.SubjectId, Tag = key.NormalizedContent, Confidence = tags.Max(x => x.Confidence) })
                 .GroupBy(t => t.SubjectId, (key, tags) => new { SubjectId = key, Hits = tags.Count(), Confidence = tags.Average(t => t.Confidence) })
                 .Where(item => item.Hits == vq.Length);
             var relatedSubjects = _context.Subjects.Include(sub => sub.ScientificRank)
