@@ -81,7 +81,7 @@ namespace chii.Controllers
 
         [HttpPost("related")]
         [Consumes("application/json")]
-        public async Task<ActionResult<IEnumerable<BriefTag>>> GetRelatedTags(RelatedTagField relatedTagField)
+        public async Task<ActionResult<IEnumerable<BriefTag>>> GetRelatedTags(RelatedTagField   )
         {
             List<string> tags = new List<string>();
             if (relatedTagField.tags?.Count() > 0)

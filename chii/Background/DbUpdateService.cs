@@ -1,5 +1,4 @@
-﻿using Azure.Storage.Files.Shares;
-using Azure.Storage.Files.Shares.Models;
+﻿using Azure.Storage.Blobs;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,84 +11,240 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using chii.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace chii.Background
 {
-    public class DbUpdateService : IHostedService, IDisposable
+    internal interface ISyncService
     {
-        private Timer _timer;
-        private readonly IConfiguration _config;
-        private readonly ILogger<DbUpdateService> _logger;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
+        Task Sync();
+    }
 
-        public DbUpdateService(IServiceScopeFactory serviceScopeFactory, IConfiguration configuration, ILogger<DbUpdateService> logger)
+    internal class SyncService: ISyncService
+    {
+        private readonly ILogger _logger;
+        private readonly IConfiguration _config;
+        private readonly BangumiContext _db;
+
+        public SyncService(BangumiContext bangumiContext, IConfiguration configuration, ILogger<SyncService> logger)
         {
-            _serviceScopeFactory = serviceScopeFactory;
             _logger = logger;
+            _db = bangumiContext;
             _config = configuration;
         }
 
-        public Task StartAsync(CancellationToken stoppingToken)
+        public async Task Sync()
         {
-            _logger.LogInformation("Set up db update cron job.");
-
-            _timer = new Timer(UpdateDatabase, null, TimeSpan.Zero,
-                TimeSpan.FromHours(1));
-
-            return Task.CompletedTask;
+            _logger.LogInformation("Start sync job...");
+            string connectionString = _config["AZURE_FILESHARE_CONNECTIONSTRING"];
+            BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
+            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient("database");
+            DateTime date = await GetLastFileDate(containerClient, "customrank");
+            if (_db.Timestamps.Count() > 0 && _db.Timestamps.First().Date >= date)
+            {
+                _logger.LogInformation($"Data on {date.ToString()} already exists, exit.");
+                return;
+            }
+            await UpdateSubjectDb(containerClient);
+            await UpdateSubjectEntityDb(containerClient);
+            await UpdateTagsDb(containerClient);
+            await UpdateRankDb(containerClient);
+            await UpdateDateDb(date);
         }
 
-        private async void UpdateDatabase(object state)
+        private async Task UpdateSubjectDb(BlobContainerClient blobContainerClient)
         {
-            //https://stackoverflow.com/questions/51572637/access-dbcontext-service-from-background-task
-            using (var scope = _serviceScopeFactory.CreateScope())
+            var s = _db.Subjects.Count();
+            if (s != 0)
             {
-                var _db = scope.ServiceProvider.GetRequiredService<BangumiContext>();
-                bool isEmptyDb = _db.CustomRanks.Count() == 0;
-                DateTime dbDate = new DateTime(), lastDate = new DateTime();
-                if (!isEmptyDb)
+                _db.Subjects.RemoveRange(_db.Subjects);
+                await _db.SaveChangesAsync();
+                _logger.LogInformation("Existing subjects removed.");
+            }
+
+            DateTime lastDate = await GetLastFileDate(blobContainerClient, "subject_archive");
+            //DateTime lastDate = new DateTime(2022, 4, 3);
+            string lastSubjectFile = "subject_archive_" + lastDate.ToString("yyyy_MM_dd") + ".jsonlines";
+            await DownloadFile(blobContainerClient, lastSubjectFile);
+
+            _logger.LogInformation($"UpdateSubjectDb processing file {lastSubjectFile}...");
+
+            using (var reader = new StreamReader($"./{lastSubjectFile}"))
+            {
+                while (reader.Peek() >= 0)
                 {
-                    dbDate = _db.CustomRanks.First().Date;
-                    lastDate = await GetLastFileDate("bangumi-publish", "ranking", "customrank_");
-                }
-                if (isEmptyDb || dbDate != lastDate)
-                {
-                    _logger.LogInformation($"Db date {dbDate.ToString()} doesn't match fileshare date {lastDate.ToString()}, will update.");
-                    await UpdateSubjectDb(_db);
-                    await UpdateTagDb(_db);
-                    await UpdateRankDb(_db);
+                    int cnt = 0;
+                    List<Subject> subjects = new List<Subject>();
+                    while (reader.Peek() >= 0 && cnt <= 10000)
+                    {
+                        string record = reader.ReadLine().Trim();
+                        Subject subject;
+                        try
+                        {
+                            subject = JsonConvert.DeserializeObject<Subject>(record);
+                        } catch
+                        {
+                            _logger.LogError("Cannot deserialize Subject: ", record);
+                            continue;
+                        }
+                        subjects.Add(subject);
+                        cnt++;
+                    }
+                    await _db.Subjects.AddRangeAsync(subjects);
+                    await _db.SaveChangesAsync();
                 }
             }
+            _logger.LogInformation("Subjects archived successfully.");
         }
 
-        public Task StopAsync(CancellationToken stoppingToken)
+        private async Task UpdateSubjectEntityDb(BlobContainerClient blobContainerClient)
         {
-            _logger.LogInformation("Tear down db update cron job.");
+            var s = _db.SubjectEntities.Count();
+            if (s != 0)
+            {
+                _db.SubjectEntities.RemoveRange(_db.SubjectEntities);
+                await _db.SaveChangesAsync();
+                _logger.LogInformation("Existing subject entities removed.");
+            }
 
-            _timer?.Change(Timeout.Infinite, 0);
+            DateTime lastDate = await GetLastFileDate(blobContainerClient, "subject_entity");
+            //DateTime lastDate = new DateTime(2022, 4, 3);
+            string lastSubjectFile = "subject_entity_" + lastDate.ToString("yyyy_MM_dd") + ".jsonlines";
+            await DownloadFile(blobContainerClient, lastSubjectFile);
 
-            return Task.CompletedTask;
+            _logger.LogInformation($"UpdateSubjectEntityDb processing file {lastSubjectFile}...");
+
+            using (var reader = new StreamReader($"./{lastSubjectFile}"))
+            {
+
+                while (reader.Peek() >= 0)
+                {
+                    int cnt = 0;
+                    List<SubjectEntity> subjectEnts = new List<SubjectEntity>();
+                    while (reader.Peek() >= 0 && cnt <= 10000)
+                    {
+                        string record = reader.ReadLine().Trim();
+                        SubjectEntity subjectEnt;
+                        try
+                        {
+                            subjectEnt = JsonConvert.DeserializeObject<SubjectEntity>(record);
+                        } catch
+                        {
+                            _logger.LogError("Cannot deserialize SubjectEntity: ", record);
+                            continue;
+                        }
+                        subjectEnts.Add(subjectEnt);
+                        cnt++;
+                    }
+                    await _db.SubjectEntities.AddRangeAsync(subjectEnts);
+                    await _db.SaveChangesAsync();
+                }
+            }
+            _logger.LogInformation("Subject entities archived successfully.");
         }
 
-        public void Dispose()
+        private async Task UpdateTagsDb(BlobContainerClient blobContainerClient)
         {
-            _timer?.Dispose();
+            var s = _db.Tags.Count();
+            if (s != 0)
+            {
+                _db.Tags.RemoveRange(_db.Tags);
+                await _db.SaveChangesAsync();
+                _logger.LogInformation("Existing tags removed.");
+            }
+
+            DateTime lastDate = await GetLastFileDate(blobContainerClient, "tags");
+            //DateTime lastDate = new DateTime(2022, 4, 12);
+            string lastTagFile = "tags_" + lastDate.ToString("yyyy_MM_dd") + ".jsonlines";
+            await DownloadFile(blobContainerClient, lastTagFile);
+
+            _logger.LogInformation($"UpdateTagsDb processing file {lastTagFile}...");
+
+            using (var reader = new StreamReader($"./{lastTagFile}"))
+            {
+
+                while (reader.Peek() >= 0)
+                {
+                    int cnt = 0;
+                    List<Tag> tags = new List<Tag>();
+                    while (reader.Peek() >= 0 && cnt <= 10000)
+                    {
+                        string record = reader.ReadLine().Trim();
+                        Tag tag;
+                        try
+                        {
+                            tag = JsonConvert.DeserializeObject<Tag>(record);
+                        }
+                        catch
+                        {
+                            _logger.LogError("Cannot deserialize Tag: ", record);
+                            continue;
+                        }
+                        tags.Add(tag);
+                        cnt++;
+                    }
+                    await _db.Tags.AddRangeAsync(tags);
+                    await _db.SaveChangesAsync();
+                }
+            }
+            _logger.LogInformation("Tags archived successfully.");
         }
 
-        private async Task<DateTime> GetLastFileDate(string fileshare, string dir, string prefix)
+        private async Task UpdateRankDb(BlobContainerClient blobContainerClient)
         {
-            _logger.LogInformation($"Getting latest date of {dir}.");
+            var s = _db.CustomRanks.Count();
+            if (s != 0)
+            {
+                _db.CustomRanks.RemoveRange(_db.CustomRanks);
+                await _db.SaveChangesAsync();
+                _logger.LogInformation("Existing ranks removed.");
+            }
+
+            DateTime lastDate = await GetLastFileDate(blobContainerClient, "customrank");
+            string lastRankFile = "customrank_" + lastDate.ToString("yyyy_MM_dd") + ".csv";
+            await DownloadFile(blobContainerClient, lastRankFile);
+
+            _logger.LogInformation($"UpdateSubjectDb processing file {lastRankFile}...");
+
+            using (var reader = new StreamReader($"./{lastRankFile}"))
+            {
+                List<CustomRank> ranks = new List<CustomRank>();
+                reader.ReadLine();
+                while (reader.Peek() >= 0)
+                {
+                    string line = reader.ReadLine().Trim();
+                    string[] parts = line.Split(new[] { ',' });
+                    CustomRank rank = new CustomRank
+                    {
+                        SubjectId = Int32.Parse(parts[0]),
+                        SciRank = Int32.Parse(parts[1]),
+                    };
+                    ranks.Add(rank);
+                }
+                await _db.CustomRanks.AddRangeAsync(ranks);
+                await _db.SaveChangesAsync();
+            }
+            _logger.LogInformation("Ranks archived successfully.");
+        }
+
+        private async Task UpdateDateDb(DateTime date)
+        {
+            _db.Timestamps.RemoveRange(_db.Timestamps);
+            await _db.Timestamps.AddAsync(new Timestamp { Date = date });
+            await _db.SaveChangesAsync();
+            _logger.LogInformation("Timestamp updated.");
+        }
+
+        private async Task<DateTime> GetLastFileDate(BlobContainerClient containerClient, string prefix)
+        {
+            _logger.LogInformation($"Getting latest date of {prefix}.");
             string connectionString = _config["AZURE_FILESHARE_CONNECTIONSTRING"];
             Regex dateRegex = new Regex(@"(\d+)_(\d+)_(\d+)", RegexOptions.Compiled);
             // Download subject and ranking file
-            ShareClient share = new ShareClient(connectionString, fileshare);
-            ShareDirectoryClient directory = share.GetDirectoryClient(dir);
-            var items = directory.GetFilesAndDirectoriesAsync(prefix);
-            // Get the last date
             DateTime date = new DateTime(2021, 1, 1);
-            await foreach (var item in items)
+            await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: prefix))
             {
-                var match = dateRegex.Match(item.Name);
+                var match = dateRegex.Match(blobItem.Name);
                 if (match.Success)
                 {
                     DateTime newdate = new DateTime(Convert.ToInt32(match.Groups[1].Value), Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value));
@@ -99,23 +254,19 @@ namespace chii.Background
                     }
                 }
             }
-            _logger.LogInformation($"Latest date of {dir} is {date.ToString()}");
+            _logger.LogInformation($"Latest date of {prefix} is {date.ToString()}");
             return date;
         }
 
-        private async Task DownloadFile(string fileshare, string dir, string filename)
+        private async Task DownloadFile(BlobContainerClient containerClient, string filename)
         {
             _logger.LogInformation($"Download {filename} to working directory.");
-            string connectionString = _config["AZURE_FILESHARE_CONNECTIONSTRING"];
-            ShareClient share = new ShareClient(connectionString, fileshare);
-            ShareDirectoryClient directory = share.GetDirectoryClient(dir);
-            ShareFileClient file = directory.GetFileClient(filename);
-            ShareFileDownloadInfo dwn = await file.DownloadAsync();
+            BlobClient file = containerClient.GetBlobClient(filename);
             if (!File.Exists($"./{filename}"))
             {
                 using (FileStream stream = File.OpenWrite($"./{filename}"))
                 {
-                    await dwn.Content.CopyToAsync(stream);
+                    await file.DownloadToAsync(stream);
                 }
             }
             else
@@ -123,130 +274,56 @@ namespace chii.Background
                 _logger.LogInformation($"File {filename} already exists.");
             }
         }
+    }
 
-        private async Task UpdateSubjectDb(BangumiContext db)
+    public class DbUpdateService : BackgroundService
+    {
+        private Timer _timer;
+        
+        private readonly ILogger<DbUpdateService> _logger;
+        private readonly IServiceProvider _service;
+
+        public DbUpdateService(IServiceProvider service, ILogger<DbUpdateService> logger)
         {
-            const string shareName = @"bangumi-publish";
-            DateTime lastDate = await GetLastFileDate(shareName, "subject", "subject_");
-            string lastSubjectFile = "subject_" + lastDate.ToString("yyyy_MM_dd") + ".tsv";
-            await DownloadFile(shareName, "subject", lastSubjectFile);
-
-            StreamReader fSubject = new StreamReader($"./{lastSubjectFile}");
-
-            _logger.LogInformation("Reading all subjects...");
-            string line;
-            List<Subject> subjects = new List<Subject>();
-            while ((line = fSubject.ReadLine()) != null)
-            {
-                var items = line.Split('\t');
-                int votenum = Convert.ToInt32(items[6]);
-                int favnum = items[7].Split(';').Select(i => Convert.ToInt32(i)).Sum();
-                DateTime dateTime;
-                DateTime.TryParse(items[5], out dateTime);
-                subjects.Add(new Subject
-                {
-                    Id = Convert.ToInt32(items[0]),
-                    Name = items[1],
-                    NameCN = String.IsNullOrEmpty(items[2]) ? null : items[2],
-                    Type = items[3],
-                    Rank = String.IsNullOrEmpty(items[4]) ? null : Convert.ToInt32(items[4]),
-                    Date = dateTime,
-                    Votenum = votenum,
-                    Favnum = favnum
-                });
-            }
-
-            var s = db.Subjects.Count();
-            if (s != 0)
-            {
-                db.Subjects.RemoveRange(db.Subjects);
-            }
-            db.AddRange(subjects);
-            db.SaveChanges();
-            _logger.LogInformation("Subjects archived successfully.");
+            _service = service;
+            _logger = logger;
         }
 
-        private async Task UpdateTagDb(BangumiContext db)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            const string shareName = @"bangumi-publish";
-            DateTime lastDate = await GetLastFileDate(shareName, "tags", "customtags_");
-            string lastTagFile = "customtags_" + lastDate.ToString("yyyy_MM_dd") + ".tsv";
-            await DownloadFile(shareName, "tags", lastTagFile);
+            _logger.LogInformation("Set up db update cron job.");
 
-            StreamReader fTag = new StreamReader($"./{lastTagFile}");
+            _timer = new Timer(UpdateDatabase, null, TimeSpan.Zero,
+                TimeSpan.FromHours(3));
 
-            _logger.LogInformation("Reading all tags...");
-            string line = fTag.ReadLine(); // skip header
-            List<Tag> tags = new List<Tag>();
-            int cnt = 0;
-            var s = db.Tags.Count();
-            if (s != 0)
-            {
-                db.Tags.RemoveRange(db.Tags);
-            }
-
-            while ((line = fTag.ReadLine()) != null)
-            {
-                var items = line.Split('\t');
-                if (String.IsNullOrWhiteSpace(items[1]) || items[1].Length > 256) continue;
-                tags.Add(new Tag
-                {
-                    SubjectId = Convert.ToInt32(items[0]),
-                    Content = Regex.Replace(items[1], @"\s+", ""),
-                    TagCount = Convert.ToInt32(items[2]),
-                    UserCount = Convert.ToInt32(items[3]),
-                    Confidence = Convert.ToDouble(items[4])
-                });
-                cnt++;
-
-                if (cnt == 100000)
-                {
-                    cnt = 0;
-                    db.Tags.AddRange(tags);
-                    db.SaveChanges();
-                    tags.Clear();
-                }
-            }
-
-            if (cnt != 0)
-            {
-                db.Tags.AddRange(tags);
-                db.SaveChanges();
-            }
-            _logger.LogInformation("Tags archived successfully.");
+            return Task.CompletedTask;
         }
 
-        private async Task UpdateRankDb(BangumiContext db)
+        private async void UpdateDatabase(object state)
         {
-            const string shareName = @"bangumi-publish";
-            DateTime lastDate = await GetLastFileDate(shareName, "ranking", "customrank_");
-            string lastRankFile = "customrank_" + lastDate.ToString("yyyy_MM_dd") + ".csv";
-            await DownloadFile(shareName, "ranking", lastRankFile);
-
-            StreamReader fRank = new StreamReader($"./{lastRankFile}");
-
-            _logger.LogInformation("Reading all ranks...");
-            string line = fRank.ReadLine(); // skip header
-            List<CustomRank> ranks = new List<CustomRank>();
-            while ((line = fRank.ReadLine()) != null)
+            using (var scope = _service.CreateScope())
             {
-                var items = line.Split(',');
-                ranks.Add(new CustomRank
-                {
-                    SubjectId = Convert.ToInt32(items[0]),
-                    SciRank = Convert.ToInt32(items[1]),
-                    Date = lastDate
-                });
-            }
+                var scopedProcessingService =
+                scope.ServiceProvider
+                    .GetRequiredService<ISyncService>();
 
-            var s = db.CustomRanks.Count();
-            if (s != 0)
-            {
-                db.CustomRanks.RemoveRange(db.CustomRanks);
+                await scopedProcessingService.Sync();
             }
-            db.CustomRanks.AddRange(ranks);
-            db.SaveChanges();
-            _logger.LogInformation("Ranking archived successfully.");
         }
+
+        public override Task StopAsync(CancellationToken stoppingToken)
+        {
+            _logger.LogInformation("Tear down db update cron job.");
+
+            _timer?.Change(Timeout.Infinite, 0);
+
+            return Task.CompletedTask;
+        }
+
+        public override void Dispose()
+        {
+            _timer?.Dispose();
+        }
+
     }
 }

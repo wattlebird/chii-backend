@@ -19,8 +19,8 @@ namespace chii.Controllers
         [HttpGet("lastdate")]
         public async Task<DateTime> GetLastUpdateTime()
         {
-            var rank = await _context.CustomRanks.FirstAsync();
-            return rank.Date;
+            var timestamp = await _context.Timestamps.FirstAsync();
+            return timestamp.Date;
         }
     }
 }

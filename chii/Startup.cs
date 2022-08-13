@@ -12,6 +12,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
 using chii.Background;
 using chii.Models;
 
@@ -29,10 +30,11 @@ namespace chii
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<BangumiContext>(opt => opt.UseNpgsql(Configuration["AZURE_SQL_BANGUMIDB_CONNECTIONSTRING"]));
+            services.AddDbContextPool<BangumiContext>(opt => opt.UseNpgsql(Configuration["AZURE_SQL_BANGUMIDB_CONNECTIONSTRING"]));
             services.AddControllers().
                 AddNewtonsoftJson(options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
             services.AddHostedService<DbUpdateService>();
+            services.AddScoped<ISyncService, SyncService>();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "chii", Version = "v1" });
@@ -49,7 +51,9 @@ namespace chii
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "chii v1"));
             }
 
-            //app.UseHttpsRedirection();
+            app.UseHttpLogging();
+
+            app.UseHttpsRedirection();
 
             app.UseRouting();
 

@@ -20,74 +20,82 @@ namespace chii.Controllers
             _context = context;
         }
 
-        [HttpGet("ranked")]
-        public async Task<ActionResult<IEnumerable<ClientSubject>>> GetRankedSubjects([FromQuery] string type = "anime", [FromQuery] int from = 0, [FromQuery] int step = 20, [FromQuery] bool bysci = true)
-        {
-            var subjectsObj = _context.Subjects.Where(x => x.Type == type && x.Rank != null);
-            if (bysci)
-            {
-                subjectsObj = subjectsObj.OrderBy(x => x.ScientificRank.SciRank).Skip(from).Take(step);
-            } else
-            {
-                subjectsObj = subjectsObj.OrderBy(x => x.Rank).Skip(from).Take(step);
-            }
-            var subjects = await subjectsObj
-                .Include(sub => sub.ScientificRank).ToListAsync();
-            if (subjects.Count == 0)
-            {
-                return NotFound();
-            }
-            var rtn = subjects.Select(sub => new ClientSubject
-            {
-                Id = sub.Id,
-                Name = sub.Name,
-                NameCN = sub.NameCN,
-                Type = sub.Type,
-                Rank = sub.Rank,
-                SciRank = sub.ScientificRank?.SciRank,
-                Date = sub.Date,
-            }).ToList();
-            return rtn;
-        }
-
         // GET: api/Subjects/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ClientSubject>> GetSubject(int id)
+        public async Task<ActionResult<SubjectResponse>> GetSubject(int id)
         {
-            var subject = await _context.Subjects.Where(x => x.Id == id)
+            Subject subject = await _context.Subjects.Where(x => x.Id == id)
                 .Include(sub => sub.ScientificRank)
-                .Include(sub => sub.Tags).FirstAsync();
+                .Include(sub => sub.Tags).FirstOrDefaultAsync();
             if (subject == null)
             {
                 return NotFound();
             }
-            var rtn = new ClientSubject
+            SubjectResponse rtn = new SubjectResponse
             {
                 Id = subject.Id,
                 Name = subject.Name,
                 NameCN = subject.NameCN,
-                Type = subject.Type,
+                Infobox = subject.Infobox,
+                Platform = subject.Platform,
+                Summary = subject.Summary,
                 Rank = subject.Rank,
-                SciRank = subject.ScientificRank?.SciRank,
-                Date = subject.Date,
-                Votenum = subject.Votenum,
-                Favnum = subject.Favnum,
-                Tags = subject.Tags.Select(tag => new ClientTag
+                NSFW = subject.NSFW,
+                Type = subject.Type,
+                FavCount = subject.FavCount,
+                RateCount = subject.RateCount,
+                CollectCount = subject.CollectCount,
+                DoCount = subject.DoCount,
+                DroppedCount = subject.DroppedCount,
+                OnHoldCount = subject.OnHoldCount,
+                WishCount = subject.WishCount,
+                Tags = subject?.Tags.Select(tag => new TagResponse
                 {
-                    Tag = tag.Content,
-                    TagCount = tag.TagCount,
-                    UserCount = tag.UserCount,
-                    Confidence = tag.Confidence
-                }).ToList()
+                    Content = tag.Content,
+                    Confidence = tag.Confidence,
+                    UserCount = tag.UserCount
+                }).ToList(),
+                ScientificRank = subject.ScientificRank is null ? null : new CustomRankResponse
+                {
+                    SciRank = subject.ScientificRank.SciRank
+                },
             };
             return rtn;
         }
 
-        [HttpGet("count")]
-        public async Task<int> GetSubjectCount([FromQuery] string type = "anime", [FromQuery] bool ranked = true)
+        [HttpGet("ranking")]
+        public async Task<ActionResult<IEnumerable<SubjectResponse>>> GetRankedSubjects([FromQuery] string type = "anime")
         {
-            var cnt = await _context.Subjects.Where(sub => sub.Type == type && (sub.ScientificRank != null || !ranked)).CountAsync();
-            return cnt;
+            List<Subject> subjects = await _context.Subjects.Where(x => x.Type == type && x.Rank != null)
+                .Include(sub => sub.ScientificRank)
+                .OrderBy(x => x.Rank).ToListAsync();
+            if (subjects.Count == 0)
+            {
+                return NotFound();
+            }
+            return subjects.Select(sub => new SubjectResponse
+            {
+                Id = sub.Id,
+                Name = sub.Name,
+                NameCN = sub.NameCN,
+                Infobox = sub.Infobox,
+                Platform = sub.Platform,
+                Summary = sub.Summary,
+                Rank = sub.Rank,
+                NSFW = sub.NSFW,
+                Type = sub.Type,
+                FavCount = sub.FavCount,
+                RateCount = sub.RateCount,
+                CollectCount = sub.CollectCount,
+                DoCount = sub.DoCount,
+                DroppedCount = sub.DroppedCount,
+                OnHoldCount = sub.OnHoldCount,
+                WishCount = sub.WishCount,
+                ScientificRank = sub.ScientificRank is null ? null : new CustomRankResponse
+                {
+                    SciRank = sub.ScientificRank.SciRank
+                },
+            }).ToList();
         }
     }
 }

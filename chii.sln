@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.809.5
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32126.317
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chii", "chii\chii.csproj", "{A7F2D146-F172-45A5-9857-AB7FB6E6D22C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dbmgr", "dbmgr\dbmgr.csproj", "{D72BFFE6-6321-4807-8518-B5A05FB2EF41}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chii", "chii\chii.csproj", "{A7F2D146-F172-45A5-9857-AB7FB6E6D22C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +15,6 @@ Global
 		{A7F2D146-F172-45A5-9857-AB7FB6E6D22C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7F2D146-F172-45A5-9857-AB7FB6E6D22C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A7F2D146-F172-45A5-9857-AB7FB6E6D22C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D72BFFE6-6321-4807-8518-B5A05FB2EF41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D72BFFE6-6321-4807-8518-B5A05FB2EF41}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D72BFFE6-6321-4807-8518-B5A05FB2EF41}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D72BFFE6-6321-4807-8518-B5A05FB2EF41}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

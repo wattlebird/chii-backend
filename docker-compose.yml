@@ -1,31 +1,12 @@
 version: "3"
 services:
-    frontend:
-        depends_on: 
-            - middletier
-        restart: always
-        build: ./frontend
-        ports: 
-            - "80:80"
-    middletier:
-        depends_on: 
-            - web
-            - redis
-        restart: always
-        build: ./middletier
-        ports:
-            - "4000:4000"
-        environment: 
-            WEB_URL: "http://web:5000"
-            REDIS_HOST: "redis"
-            NODE_ENV: "development"
     web:
         depends_on:
             - db
         restart: always
         build: ./chii
         ports:
-            - "5000:5000"
+            - "3001:5000"
         environment:
             AZURE_FILESHARE_CONNECTIONSTRING: ""
             AZURE_SQL_BANGUMIDB_CONNECTIONSTRING: ""
@@ -41,6 +22,3 @@ services:
             POSTGRES_DB: bangumi
         ports:
             - "5555:5432"
-    redis:
-        image: "redis:6"
-        restart: always

@@ -12,6 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: get-npm-version
+      id: package-version
+      uses: martinbeentjes/npm-get-version-action@master
+      with:
+        path: dbinit/
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
@@ -26,4 +31,4 @@ jobs:
       with:
         context: ./dbinit
         push: true
-        tags: wattlebird/chii_db:latest
+        tags: wattlebird/chii_db:latest, wattlebird/chii_db:${{ steps.package-version.outputs.current-version}}
