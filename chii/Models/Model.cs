@@ -7,6 +7,33 @@ using Newtonsoft.Json;
 
 namespace chii.Models
 {
+    public class NullableFloatToIntConverter : JsonConverter<int?>
+    {
+        public override int? ReadJson(JsonReader reader, Type objectType, int? existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.Null)
+                return null;
+
+            if (!float.TryParse(reader.Value.ToString(), out var floatValue))
+                return null;
+
+            return (int)floatValue;
+        }
+        
+        public override void WriteJson(JsonWriter writer, int? value, JsonSerializer serializer)
+        {
+            if (value.HasValue)
+            {
+                writer.WriteValue(value.ToString());
+            }
+            else
+            {
+                writer.WriteNull();
+            }
+            
+        }
+    }
+    
     [JsonObject(MemberSerialization.OptIn)]
     public class Subject
     {
@@ -28,6 +55,7 @@ namespace chii.Models
         [JsonProperty(PropertyName = "summary")]
         public string? Summary { get; set; }
         [JsonProperty(PropertyName = "rank")]
+        [JsonConverter(typeof(NullableFloatToIntConverter))]
         public int? Rank { get; set; }
         [JsonProperty(PropertyName = "nsfw")]
         public bool NSFW { get; set; }
